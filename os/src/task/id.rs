@@ -48,6 +48,7 @@ lazy_static! {
 }
 
 /// Abstract structure of PID
+#[derive(PartialEq)]
 pub struct PidHandle(pub usize);
 
 impl Drop for PidHandle {
@@ -80,6 +81,7 @@ pub fn kstack_alloc() -> KernelStack {
         kstack_bottom.into(),
         kstack_top.into(),
         MapPermission::R | MapPermission::W,
+        false
     );
     KernelStack(kstack_id)
 }
