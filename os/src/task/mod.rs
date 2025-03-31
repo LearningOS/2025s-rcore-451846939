@@ -22,6 +22,7 @@ use lazy_static::*;
 use switch::__switch;
 pub use task::{TaskControlBlock, TaskStatus};
 
+use crate::mm::{MapPermission, VirtAddr};
 pub use context::TaskContext;
 
 /// The task manager, where all the tasks are managed.
@@ -153,6 +154,38 @@ impl TaskManager {
             panic!("All applications completed!");
         }
     }
+
+    /// add_current_memory_set
+    fn add_current_memory_set(
+        &self,
+        start_va: VirtAddr,
+        end_va: VirtAddr,
+        permission: MapPermission,
+    ) -> bool {
+        let mut inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        return inner.tasks[current].add_user_memory_set(start_va, end_va, permission);
+    }
+
+    /// get_current_task
+    fn get_current_task_syscall(&self, syscall_id: usize) -> usize {
+        let inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        return inner.tasks[current].get_syscall_counter(syscall_id);
+    }
+    /// remove_current_memory_set
+    fn remove_current_memory_set(&self, start_va: VirtAddr, end_va: VirtAddr) -> bool {
+        let mut inner = self.inner.exclusive_access();
+        let current_task = inner.current_task;
+        inner.tasks[current_task].remove_user_memory_set(start_va, end_va)
+    }
+
+    ///get_current_task_mut
+    fn add_syscall_counter(&self, syscall_id: usize) {
+        let mut inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        inner.tasks[current].add_syscall_counter(syscall_id);
+    }
 }
 
 /// Run the first task in task list.
@@ -201,4 +234,28 @@ pub fn current_trap_cx() -> &'static mut TrapContext {
 /// Change the current 'Running' task's program break
 pub fn change_program_brk(size: i32) -> Option<usize> {
     TASK_MANAGER.change_current_program_brk(size)
+}
+
+/// add_current_memory_set
+pub fn add_current_memory_set(
+    start_va: VirtAddr,
+    end_va: VirtAddr,
+    permission: MapPermission,
+) -> bool {
+    return TASK_MANAGER.add_current_memory_set(start_va, end_va, permission);
+}
+/// remove_current_memory_set
+pub fn remove_current_memory_set(start_va: VirtAddr, end_va: VirtAddr) -> bool {
+    TASK_MANAGER.remove_current_memory_set(start_va, end_va)
+}
+
+
+/// Get current `Running` task.
+pub fn get_current_task_syscall(syscall_id: usize) -> usize {
+    TASK_MANAGER.get_current_task_syscall(syscall_id)
+}
+
+///
+pub fn add_current_task_syscall(syscall_id: usize) {
+    TASK_MANAGER.add_syscall_counter(syscall_id)
 }

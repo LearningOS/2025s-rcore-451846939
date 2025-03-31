@@ -57,11 +57,52 @@ impl MemorySet {
         start_va: VirtAddr,
         end_va: VirtAddr,
         permission: MapPermission,
-    ) {
+        is_user: bool,
+    ) ->bool{
+        if is_user {
+            let found_area_index = self.areas.iter().position(|area| {
+
+                let x = area.vpn_range.get_start() < end_va.ceil() && start_va.floor() < area.vpn_range.get_end();
+                // println!("start_va.page_offset():{:?}",start_va.page_offset());
+                // if x {
+                //     println!("area.vpn_range.get_start(): {:?}, end_va.floor(): {:?}", area.vpn_range.get_start(), end_va.floor());
+                //     println!("area.vpn_range.get_end(): {:?}, start_va.floor(): {:?}", area.vpn_range.get_end(), start_va.floor());
+                // }
+                return x;
+            }
+            );
+            // println!("found_area_index: {:?}", found_area_index);
+            if found_area_index.is_some() {
+                return false;
+            }
+        }
         self.push(
             MapArea::new(start_va, end_va, MapType::Framed, permission),
             None,
         );
+        true
+    }
+
+    fn remove(&mut self, start: VirtAddr, end: VirtAddr) -> bool {
+        // println!("remove: start: {:?}, end: {:?}", start, end);
+        let found_area_index = self.areas.iter().position(|area| area.vpn_range.get_start() == start.floor() && area.vpn_range.get_end() == end.ceil());
+        // println!("found_area_index: {:?}", found_area_index);
+        if let Some(index) = found_area_index {
+            self.areas[index].unmap(&mut self.page_table);
+            self.areas.retain(|area| area.vpn_range.get_start() != start.floor() || area.vpn_range.get_end() != end.ceil());
+            true
+        } else {
+            false
+        }
+    }
+
+    /// remove_framed_area
+    pub fn remove_framed_area(
+        &mut self,
+        start_va: VirtAddr,
+        end_va: VirtAddr,
+    ) -> bool {
+        self.remove(start_va, end_va)
     }
     fn push(&mut self, mut map_area: MapArea, data: Option<&[u8]>) {
         map_area.map(&mut self.page_table);
