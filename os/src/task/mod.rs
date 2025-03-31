@@ -35,6 +35,9 @@ pub use processor::{
     current_task, current_trap_cx, current_user_token, run_tasks, schedule, take_current_task,
     Processor,
 };
+use crate::mm::{MapPermission, VirtAddr};
+use crate::task::processor::PROCESSOR;
+
 /// Suspend the current 'Running' task and run the next task in task list.
 pub fn suspend_current_and_run_next() {
     // There must be an application running.
@@ -114,4 +117,17 @@ lazy_static! {
 ///Add init process to the manager
 pub fn add_initproc() {
     add_task(INITPROC.clone());
+}
+
+/// add_current_memory_set
+pub fn add_current_memory_set(start_va: VirtAddr,
+                              end_va: VirtAddr,
+                              permission: MapPermission) -> bool {
+    PROCESSOR.exclusive_access().current().unwrap().add_user_memory_set(start_va, end_va, permission)
+}
+
+/// remove_current_memory_set
+pub fn remove_current_memory_set(start_va: VirtAddr,
+                                 end_va: VirtAddr) -> bool {
+    PROCESSOR.exclusive_access().current().unwrap().remove_user_memory_set(start_va, end_va)
 }
